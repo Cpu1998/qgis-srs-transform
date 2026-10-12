@@ -1,7 +1,15 @@
 import { openSrsDatabase, type SrsSource } from './loader.js';
 import { SrsDb } from './srs-db.js';
 import { SrsTransformer } from './transform.js';
-import type { Coord, CrsRef, SrsRecord, SearchOptions, TransformInspection, TransformOptions } from './types.js';
+import type {
+  Coord,
+  CrsRef,
+  SrsRecord,
+  SearchOptions,
+  ListSrsOptions,
+  TransformInspection,
+  TransformOptions,
+} from './types.js';
 
 /** Degrees, ready for `Cesium.Cartographic.fromDegrees` / `Cesium.Cartesian3.fromDegrees`. */
 export interface CesiumDegrees {
@@ -75,9 +83,14 @@ export class SrsService {
     return this.transformer.resolve(ref);
   }
 
-  /** Search CRS descriptions, EPSG entries ranked first. */
+  /** Search CRS descriptions and authority ids, EPSG entries ranked first. */
   search(text: string, opts?: SearchOptions): SrsRecord[] {
     return this.db.search(text, opts);
+  }
+
+  /** Full catalog of all CRS definitions, for building QGIS-style browsers/trees. */
+  list(opts?: ListSrsOptions): SrsRecord[] {
+    return this.db.list(opts);
   }
 
   /** Show the effective PROJ strings and datum operations used for a (from → to) pair. */

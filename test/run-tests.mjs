@@ -201,6 +201,21 @@ console.log('\n== T10: stress across all EPSG projected CRSs (parse coverage) ==
   if (errs.length) console.log(`  unsupported (expected for exotic projections): ${errs.slice(0, 10).join(', ')}...`);
 }
 
+console.log('\n== T11: list() catalog, srsType & code search ==');
+{
+  const all = srs.list();
+  check('list returns full catalog', all.length === srs.db.count(), `${all.length} vs ${srs.db.count()}`);
+  check('list keeps deprecated by default', all.some((r) => r.deprecated));
+  const noDep = srs.list({ includeDeprecated: false });
+  check('list can exclude deprecated', noDep.every((r) => !r.deprecated) && noDep.length < all.length);
+  const t4547 = all.find((r) => r.code === 'EPSG:4547');
+  check('srsType populated (4547 Projected)', t4547?.srsType === 'Projected', `got ${t4547?.srsType}`);
+  const geoc = all.find((r) => r.code === 'EPSG:4978');
+  check('srsType Geocentric for 4978', geoc?.srsType === 'Geocentric', `got ${geoc?.srsType}`);
+  const byCode = srs.search('4547', { limit: 10 });
+  check('search matches authority id', byCode.some((r) => r.code === 'EPSG:4547'));
+}
+
 srs.close();
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

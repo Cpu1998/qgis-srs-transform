@@ -1,4 +1,4 @@
-import type { SrsRecord, DatumTransformOp } from './types.js';
+import type { SrsRecord, DatumTransformOp, ListSrsOptions } from './types.js';
 
 /** Minimal structural typing for the sql.js objects we use. */
 interface StatementLike {
@@ -25,6 +25,7 @@ function mapSrsRow(row: Record<string, unknown>): SrsRecord {
     projectionAcronym: String(row.projection_acronym ?? ''),
     ellipsoidAcronym: String(row.ellipsoid_acronym ?? ''),
     isGeographic: Number(row.is_geo) === 1,
+    srsType: String(row.srs_type ?? ''),
     deprecated: Number(row.deprecated) === 1,
     proj: String(row.parameters ?? ''),
   };
@@ -65,7 +66,7 @@ export class SrsDb {
   }
 
   private static readonly COLUMNS =
-    'srs_id, description, projection_acronym, ellipsoid_acronym, parameters, auth_name, auth_id, is_geo, deprecated';
+    'srs_id, description, projection_acronym, ellipsoid_acronym, parameters, auth_name, auth_id, is_geo, srs_type, deprecated';
 
   getByCode(auth: string, id: string | number): SrsRecord | undefined {
     const rows = this.all(
@@ -93,17 +94,32 @@ export class SrsDb {
     return rows[0] ? mapSrsRow(rows[0]) : undefined;
   }
 
-  /** Substring search over CRS descriptions, EPSG entries first. */
+  /**
+   * Full catalog of every CRS in tbl_srs, stably ordered (geographics first, then
+   * authority + name). Used to build QGIS-style browsers/trees; deprecated entries
+   * are kept by default so the UI can toggle them without re-querying.
+   */
+  list(opts: ListSrsOptions = {}): SrsRecord[] {
+    const depFilter = opts.includeDeprecated === false ? 'WHERE deprecated = 0' : '';
+    return this.all(
+      `SELECT ${SrsDb.COLUMNS} FROM tbl_srs
+       ${depFilter}
+       ORDER BY is_geo DESC, auth_name COLLATE NOCASE ASC, description COLLATE NOCASE ASC, srs_id ASC`,
+      [],
+    ).map(mapSrsRow);
+  }
+
+  /** Substring search over CRS descriptions and authority ids, EPSG entries first. */
   search(text: string, opts: { limit?: number; includeDeprecated?: boolean } = {}): SrsRecord[] {
     const term = `%${text.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
     const limit = Math.max(1, Math.min(opts.limit ?? 50, 500));
     const depFilter = opts.includeDeprecated ? '' : 'AND deprecated = 0';
     return this.all(
       `SELECT ${SrsDb.COLUMNS} FROM tbl_srs
-       WHERE description LIKE ? ESCAPE '\\' ${depFilter}
+       WHERE (description LIKE ? ESCAPE '\\' OR auth_id LIKE ? ESCAPE '\\') ${depFilter}
        ORDER BY (auth_name = 'EPSG') DESC, deprecated ASC, srs_id ASC
        LIMIT ?`,
-      [term, limit],
+      [term, term, limit],
     ).map(mapSrsRow);
   }
 

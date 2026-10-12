@@ -18,6 +18,8 @@ export interface SrsRecord {
   ellipsoidAcronym: string;
   /** True for geographic (lon/lat) CRSs. */
   isGeographic: boolean;
+  /** QGIS CRS type, e.g. "Geographic2d", "Projected", "Geocentric", "Compound". */
+  srsType: string;
   deprecated: boolean;
   /** PROJ string from the `parameters` column — the definition actually used for math. */
   proj: string;
@@ -49,6 +51,11 @@ export interface SearchOptions {
   /** Max number of records to return (default 50). */
   limit?: number;
   /** Include deprecated CRSs (default false). */
+  includeDeprecated?: boolean;
+}
+
+export interface ListSrsOptions {
+  /** Include deprecated CRSs (default true — the UI decides whether to hide them). */
   includeDeprecated?: boolean;
 }
 

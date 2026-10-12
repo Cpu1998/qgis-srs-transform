@@ -7,6 +7,7 @@ export type {
   CrsRef,
   DatumShiftOption,
   DatumTransformOp,
+  ListSrsOptions,
   SearchOptions,
   SrsRecord,
   TransformInspection,

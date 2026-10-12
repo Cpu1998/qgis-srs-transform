@@ -19,8 +19,8 @@ src/           库源码（TypeScript）
   srs-db.ts      tbl_srs / tbl_datum_transform 查询层
   loader.ts      sql.js 加载（URL / 字节 / 已打开的 Database）
   sql-js.d.ts    sql.js 类型补丁
-test/          Node 测试（npm test，41 项断言）
-demo/          浏览器演示页（npm run demo）
+test/          Node 测试（npm test，47 项断言）
+demo/          浏览器演示页（npm run demo；QGIS 风格 CRS 目录浏览 + 度分秒等灵活输入）
 srs.db         QGIS 坐标系数据库（数据文件，随应用部署）
 ```
 
@@ -91,7 +91,8 @@ const xy = srs.transform([500000, 4350000], 'EPSG:2384', 'EPSG:3857');
 | `toWgs84(coord, from, opts?)` / `fromWgs84(coord, to, opts?)` | 与 WGS84 经纬度互转的快捷方法 |
 | `toCesiumDegrees(coord, from, opts?)` | 输出 `{longitude, latitude, height}`（度），直接喂给 Cesium |
 | `describe(ref)` | 返回 `SrsRecord`（描述、PROJ 串、是否地理坐标系等），未知则抛错 |
-| `search(text, opts?)` | 按名称模糊搜索坐标系，EPSG 优先，默认排除已废弃项 |
+| `search(text, opts?)` | 按名称或授权编码模糊搜索坐标系，EPSG 优先，默认排除已废弃项 |
+| `list(opts?)` | 全量 CRS 目录（含 `srsType` 类型字段），供构建 QGIS 风格目录树；默认含已废弃项 |
 | `inspect(from, to, opts?)` | 查看实际执行的定义：生效 PROJ 串、注入的基准转换操作 |
 | `close()` | 释放内存数据库 |
 
@@ -121,7 +122,7 @@ const xy = srs.transform([500000, 4350000], 'EPSG:2384', 'EPSG:3857');
 
 ```bash
 npm run build      # tsc 编译到 dist/
-npm test           # 编译 + 41 项断言（Web Mercator 公式核对、基准转换一致性、9606 符号约定等）
+npm test           # 编译 + 47 项断言（Web Mercator 公式核对、基准转换一致性、9606 符号约定等）
 npm run demo       # 打包演示页并起本地服务 http://127.0.0.1:8080
 ```
 

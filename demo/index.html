@@ -31,6 +31,14 @@
     font: inherit; background: #fff;
   }
   input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .crs-field { display: flex; gap: 8px; align-items: stretch; }
+  .crs-field .combo { flex: 1; min-width: 0; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 18px;
+    cursor: pointer; background: var(--accent); color: #fff;
+  }
+  button.ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+  button.browse { padding: 8px 12px; white-space: nowrap; }
   .combo { position: relative; }
   .combo .list {
     position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 4px);
@@ -41,13 +49,15 @@
   .combo .item:hover, .combo .item.active { background: var(--accent-soft); }
   .combo .item .code { color: var(--accent); font-family: Consolas, monospace; white-space: nowrap; }
   .combo .item .desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .input-section { margin-top: 16px; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; }
+  .input-section label { margin-bottom: 6px; }
+  .feedback { display: grid; gap: 5px; margin: 8px 0 0; padding: 7px 9px; background: #eef4fb; border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0; }
+  .feedback p { margin: 0; font-size: 12px; line-height: 1.5; word-break: break-all; }
+  .feedback .hint-text { color: var(--muted); }
+  .feedback .preview { color: var(--accent); font-family: Consolas, monospace; }
+  .swap-row { margin-top: 8px; font-size: 13px; color: var(--text); }
+  .swap-row label { display: inline; font-weight: 400; margin: 0 0 0 4px; cursor: pointer; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
-  button {
-    font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 18px;
-    cursor: pointer; background: var(--accent); color: #fff;
-  }
-  button.ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
   button.swap { padding: 9px 12px; }
   .presets { display: flex; gap: 8px; flex-wrap: wrap; }
   .presets button { background: #eef2f7; color: var(--text); font-weight: 500; font-size: 12.5px; padding: 6px 12px; }
@@ -63,6 +73,68 @@
   #status .ok { color: var(--ok); font-weight: 600; }
   .cesium { margin-top: 10px; }
   .cesium code { font-family: Consolas, monospace; background: #f1f5f9; border-radius: 6px; padding: 2px 6px; display: block; margin-top: 6px; }
+
+  /* ---- QGIS-style CRS browser dialog (ported from the coordinate-location widget) ---- */
+  dialog.crs-dialog {
+    width: min(760px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px));
+    padding: 0; border: 1px solid var(--line); border-radius: 12px;
+    background: #fff; color: var(--text);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  dialog.crs-dialog[open] { display: flex; }
+  dialog.crs-dialog::backdrop { background: rgba(15, 23, 42, 0.45); }
+  .crs-dialog__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 600;
+  }
+  .crs-dialog__close {
+    background: none; border: 0; color: var(--muted); font-size: 20px;
+    line-height: 1; padding: 4px 8px; cursor: pointer;
+  }
+  .crs-dialog__close:hover { color: var(--text); }
+  .crs-dialog__filter { display: flex; gap: 14px; align-items: center; padding: 12px 18px 4px; }
+  .crs-dialog__filter input[type="text"] { flex: 1; }
+  .crs-dialog__option { display: flex; gap: 5px; align-items: center; font-weight: 400; font-size: 13px; white-space: nowrap; color: var(--muted); cursor: pointer; }
+  .crs-dialog__section { padding: 10px 18px 0; }
+  .crs-dialog__section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .crs-dialog__section-header h3 { margin: 0; font-size: 13.5px; }
+  .crs-dialog__section-header span { color: var(--muted); font-size: 12px; }
+  .crs-dialog__section--tree { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 10px; }
+  .crs-rows, .crs-tree {
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: auto;
+  }
+  .crs-rows { max-height: 132px; }
+  .crs-tree { flex: 1; min-height: 0; }
+  .crs-empty-row { padding: 10px 12px; color: var(--muted); font-size: 13px; }
+  .crs-tree__empty { padding: 12px; color: var(--muted); font-size: 13px; }
+  .crs-group {
+    display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+    background: #f1f5f9; font-size: 13px; font-weight: 600; cursor: pointer;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .crs-group:hover { background: #e2e8f0; }
+  .crs-group__caret { width: 0; height: 0; border-left: 5px solid #94a3b8; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.15s; }
+  .crs-group.is-open .crs-group__caret { transform: rotate(90deg); }
+  .crs-group__count { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .crs-leaf {
+    display: grid; grid-template-columns: minmax(0, 1fr) 150px; align-items: center;
+    column-gap: 12px; padding: 6px 10px 6px 14px; cursor: pointer; font-size: 13px;
+  }
+  .crs-tree__children .crs-leaf:hover { background: var(--accent-soft); }
+  .crs-leaf.is-selected { background: #bfdbfe; }
+  .crs-leaf.is-current:not(.is-selected) { background: var(--accent-soft); }
+  .crs-leaf__label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .crs-leaf__label > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .crs-leaf__authority { overflow: hidden; color: var(--muted); font-size: 12px; font-family: Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+  .tag {
+    flex: none; font-size: 11px; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 0 5px; line-height: 18px; background: #fff;
+  }
+  .tag--deprecated { color: #b45309; border-color: #d97706; }
+  .crs-dialog__footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 12px 18px; border-top: 1px solid var(--line);
+  }
 </style>
 </head>
 <body>
@@ -71,7 +143,8 @@
   <div class="sub">
     数据来自 QGIS <code>srs.db</code>（<span id="db-count">…</span> 条坐标系定义），
     投影计算 <code>proj4</code>，基准转换参数来自 <code>tbl_datum_transform</code>。
-    经纬度输入输出均为 <b>度</b>，顺序为 <b>经度在前（x, y）</b>。
+    地理坐标系输入输出均为 <b>度</b>；输入框支持度分秒、纬度在前等写法，与
+    DXApp「坐标定位」控件一致。
   </div>
 
   <div class="card">
@@ -84,25 +157,35 @@
     <div class="grid">
       <div>
         <label>源坐标系 <span class="hint">输入编码或名称搜索</span></label>
-        <div class="combo" id="from-combo"></div>
+        <div class="crs-field">
+          <div class="combo" id="from-combo"></div>
+          <button class="ghost browse" id="from-browse" title="打开 QGIS 风格坐标系目录浏览">浏览…</button>
+        </div>
       </div>
       <div>
         <label>目标坐标系</label>
-        <div class="combo" id="to-combo"></div>
+        <div class="crs-field">
+          <div class="combo" id="to-combo"></div>
+          <button class="ghost browse" id="to-browse" title="打开 QGIS 风格坐标系目录浏览">浏览…</button>
+        </div>
       </div>
     </div>
-    <div style="margin-top:16px;">
-      <label>输入坐标 <span class="hint">x / y / z（z 可选，原样传递）</span></label>
-      <div class="xyz">
-        <input type="number" id="cx" step="any" placeholder="x（经度或东坐标）" />
-        <input type="number" id="cy" step="any" placeholder="y（纬度或北坐标）" />
-        <input type="number" id="cz" step="any" placeholder="z（可选，高度）" />
+    <div class="input-section">
+      <label for="coord-input">输入坐标 <span class="hint">按源坐标系的量纲书写，见下方提示</span></label>
+      <input type="text" id="coord-input" autocomplete="off" />
+      <div class="feedback">
+        <p class="hint-text" id="input-hint"></p>
+        <p class="preview" id="wgs-preview"></p>
+      </div>
+      <div class="swap-row" id="swap-xy-box" hidden>
+        <input type="checkbox" id="swap-xy" />
+        <label for="swap-xy">北坐标在前（交换 X/Y）</label>
       </div>
     </div>
     <div class="actions">
       <button id="btn-transform">转换 →</button>
-      <button id="btn-inverse" class="ghost" title="按目标→源方向计算">← 反向</button>
-      <button id="btn-swap" class="ghost swap" title="交换源/目标坐标系">⇄ 交换</button>
+      <button id="btn-inverse" class="ghost" title="输入按目标坐标系解析，按目标→源方向计算">← 反向</button>
+      <button id="btn-swap" class="ghost swap" title="交换源/目标坐标系（输入按当前点回填）">⇄ 交换</button>
     </div>
   </div>
 
@@ -118,6 +201,33 @@
 
   <div id="status"></div>
 </div>
+
+<dialog id="crs-dialog" class="crs-dialog">
+  <header class="crs-dialog__header">
+    <span>选择坐标参考系（CRS）</span>
+    <button class="crs-dialog__close" id="crs-close" aria-label="关闭">×</button>
+  </header>
+  <div class="crs-dialog__filter">
+    <input type="text" id="crs-query" placeholder="输入名称或编码，如 4547 / Gauss-Kruger / CGCS2000"
+      aria-label="搜索坐标参考系" autocomplete="off" />
+    <label class="crs-dialog__option"><input type="checkbox" id="crs-hide-deprecated" />隐藏已废弃 CRS</label>
+  </div>
+  <section class="crs-dialog__section">
+    <div class="crs-dialog__section-header"><h3>最近使用</h3><span id="crs-recent-count"></span></div>
+    <div class="crs-rows" id="crs-recent"></div>
+  </section>
+  <section class="crs-dialog__section crs-dialog__section--tree">
+    <div class="crs-dialog__section-header"><h3>预定义坐标参考系</h3><span>按 QGIS 目录分组</span></div>
+    <div class="crs-tree" id="crs-tree">
+      <div class="crs-tree__empty" id="crs-tree-empty" hidden>未找到匹配的坐标参考系</div>
+    </div>
+  </section>
+  <footer class="crs-dialog__footer">
+    <button class="ghost" id="crs-cancel">取消</button>
+    <button id="crs-apply">应用</button>
+  </footer>
+</dialog>
+
 <script src="bundle.js"></script>
 </body>
 </html>
