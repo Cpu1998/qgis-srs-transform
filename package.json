@@ -1,0 +1,34 @@
+{
+  "name": "qgis-srs-transform",
+  "version": "1.0.0",
+  "description": "Browser/Node coordinate transformation powered by QGIS srs.db (tbl_srs PROJ definitions + tbl_datum_transform datum shifts) and proj4",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node test/run-tests.mjs",
+    "demo:build": "esbuild demo/main.ts --bundle --format=iife --outfile=demo/bundle.js && node scripts/copy-assets.mjs",
+    "demo": "npm run demo:build && npx --yes http-server demo -p 8080 -c-1"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "proj4": "^2.9.0",
+    "sql.js": "^1.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "http-server": "^14.1.1",
+    "typescript": "^5.5.0"
+  }
+}

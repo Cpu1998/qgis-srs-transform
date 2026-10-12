@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>qgis-srs-transform 坐标转换 Demo</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --line: #e3e8ef; --text: #1f2937;
+    --muted: #6b7280; --accent: #2563eb; --accent-soft: #dbeafe; --ok: #059669;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 24px; }
+  .sub code { background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 18px;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; background: #fff;
+  }
+  input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .combo { position: relative; }
+  .combo .list {
+    position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 4px);
+    background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    max-height: 260px; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  }
+  .combo .item { padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+  .combo .item:hover, .combo .item.active { background: var(--accent-soft); }
+  .combo .item .code { color: var(--accent); font-family: Consolas, monospace; white-space: nowrap; }
+  .combo .item .desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 18px;
+    cursor: pointer; background: var(--accent); color: #fff;
+  }
+  button.ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+  button.swap { padding: 9px 12px; }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .presets button { background: #eef2f7; color: var(--text); font-weight: 500; font-size: 12.5px; padding: 6px 12px; }
+  .result {
+    font-family: Consolas, "Courier New", monospace; font-size: 15px;
+    background: #0f172a; color: #a7f3d0; border-radius: 8px; padding: 14px 16px;
+    white-space: pre-wrap; word-break: break-all; min-height: 48px;
+  }
+  .meta { margin-top: 12px; font-size: 12.5px; color: var(--muted); font-family: Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+  .error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .badge { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 1px 10px; font-size: 12px; margin-right: 6px; }
+  #status { color: var(--muted); }
+  #status .ok { color: var(--ok); font-weight: 600; }
+  .cesium { margin-top: 10px; }
+  .cesium code { font-family: Consolas, monospace; background: #f1f5f9; border-radius: 6px; padding: 2px 6px; display: block; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>qgis-srs-transform 坐标转换</h1>
+  <div class="sub">
+    数据来自 QGIS <code>srs.db</code>（<span id="db-count">…</span> 条坐标系定义），
+    投影计算 <code>proj4</code>，基准转换参数来自 <code>tbl_datum_transform</code>。
+    经纬度输入输出均为 <b>度</b>，顺序为 <b>经度在前（x, y）</b>。
+  </div>
+
+  <div class="card">
+    <div class="presets" id="presets">
+      <span class="badge" style="background:#eef2f7;color:#6b7280;">常用预设</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>源坐标系 <span class="hint">输入编码或名称搜索</span></label>
+        <div class="combo" id="from-combo"></div>
+      </div>
+      <div>
+        <label>目标坐标系</label>
+        <div class="combo" id="to-combo"></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <label>输入坐标 <span class="hint">x / y / z（z 可选，原样传递）</span></label>
+      <div class="xyz">
+        <input type="number" id="cx" step="any" placeholder="x（经度或东坐标）" />
+        <input type="number" id="cy" step="any" placeholder="y（纬度或北坐标）" />
+        <input type="number" id="cz" step="any" placeholder="z（可选，高度）" />
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btn-transform">转换 →</button>
+      <button id="btn-inverse" class="ghost" title="按目标→源方向计算">← 反向</button>
+      <button id="btn-swap" class="ghost swap" title="交换源/目标坐标系">⇄ 交换</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>结果</label>
+    <div class="result" id="result">等待输入…</div>
+    <div class="meta" id="meta"></div>
+    <div class="cesium" id="cesium-box" hidden>
+      <label>Cesium 用法（目标为 WGS84 经纬度时）</label>
+      <code id="cesium-code"></code>
+    </div>
+  </div>
+
+  <div id="status"></div>
+</div>
+<script src="bundle.js"></script>
+</body>
+</html>
